@@ -1,6 +1,7 @@
 import pygame
 import time
 import random
+import os
 pygame.font.init()
 
 WIDTH, HEIGHT = 900, 700                               # Ye size pixels me hai
@@ -27,6 +28,72 @@ TITLE_FONT = pygame.font.SysFont("comicsans", 60)
 BUTTON_FONT = pygame.font.SysFont("comicsans", 40)
 
 
+def load_high_score():
+    if not os.path.exists("highscore.txt"):  
+        with open("highscore.txt", "w") as f:
+            f.write("0")
+
+    with open("highscore.txt", "r") as f:
+        return int(f.read())
+
+
+def save_high_score(score):
+    with open("highscore.txt", "w") as f:
+        f.write(str(score))
+
+
+def game_over_screen(score, high_score, new_high):
+    run = True
+
+    restart_button = pygame.Rect(WIDTH//2 - 120, HEIGHT//2 + 60, 240, 60)
+
+    while run:
+        WIN.blit(BG, (0, 0))
+
+        lost_text = TITLE_FONT.render("YOU LOST", 1, WHITE)
+        WIN.blit(lost_text, (WIDTH//2 - lost_text.get_width()//2, 150))
+
+        score_text = BUTTON_FONT.render(f"Score:{score}", 1, WHITE)
+        WIN.blit(score_text, (WIDTH//2 - score_text.get_width()//2, 250))
+
+        high_text = BUTTON_FONT.render(f"High Score: {high_score}", 1, WHITE)
+        WIN.blit(high_text, (WIDTH//2 - high_text.get_width()//2, 310))
+
+        if new_high:
+            new_high_text = BUTTON_FONT.render("NEW HIGH SCORE", 1, RED)
+            WIN.blit(new_high_text, (WIDTH//2 - new_high_text.get_width()//2, 360))
+            
+        # Draw Restart Button
+        mouse_pos = pygame.mouse.get_pos()
+
+        if restart_button.collidepoint(mouse_pos):
+            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+            pygame.draw.rect(WIN, (200,0,0), restart_button)
+        else:
+            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+            pygame.draw.rect(WIN, RED, restart_button)
+
+        restart_text = BUTTON_FONT.render("RESTART", 1, WHITE)
+        WIN.blit(
+            restart_text,
+            (
+                restart_button.x + (restart_button.width - restart_text.get_width()) // 2,
+                restart_button.y + (restart_button.height - restart_text.get_height()) // 2,
+            ),
+        )
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if restart_button.collidepoint(event.pos):
+                    return "restart"
+        
+        pygame.display.update()
+
+
 def draw_button(text, x, y, width, height, color, hover_color):
     mouse_pos = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()[0]
@@ -48,7 +115,7 @@ def draw_button(text, x, y, width, height, color, hover_color):
     return False
 
 
-def draw(player, elapsed_time, stars):
+def draw(player, elapsed_time, stars, high_score):
     WIN.blit(BG, (0, 0))
 
     time_text = FONT.render(f"Time: {round(elapsed_time)}s", 1, "white")
@@ -59,6 +126,11 @@ def draw(player, elapsed_time, stars):
     for star in stars:
         pygame.draw.rect(WIN, "white", star)
 
+    # Draw High Score (top-right)
+    high_text = FONT.render(f"High Score: {high_score}", 1, "white")
+    WIN.blit(high_text, (WIDTH - high_text.get_width() - 20, 10))
+
+
     pygame.display.update() # This line here - make sure jo img lgai hai - refresh and apply changes
 
 
@@ -67,9 +139,18 @@ def main_menu():
 
     play_button = pygame.Rect(WIDTH//2 - 100, HEIGHT//2 - 25, 200, 50)
 
+
     while run:
 
         WIN.blit(BG, (0, 0))
+
+        mouse_pos = pygame.mouse.get_pos()
+
+        if play_button.collidepoint(mouse_pos):
+            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+        else:
+            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+
 
         title_text = TITLE_FONT.render("RAIN DODGE", 1, "white")
         WIN.blit(title_text, (WIDTH//2 - title_text.get_width()//2, 150))
@@ -86,13 +167,12 @@ def main_menu():
                 play_button.y + (play_button.height - play_text.get_height()) // 2,
             ),
         )
-
    
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
                 pygame.quit()
-                return  #
+                return  
 
             if event.type == pygame.MOUSEBUTTONDOWN:   
                 mouse_pos = event.pos                  
@@ -117,6 +197,8 @@ def main():
 
     stars = []
     hit = False
+
+    high_score = load_high_score()
 
     while run:
 
@@ -153,17 +235,39 @@ def main():
                 break
 
         if hit:
-            lost_text = FONT.render("You Lost!", 1, "white")
-            WIN.blit(lost_text, (WIDTH/2 - lost_text.get_width()/2, HEIGHT/2 - lost_text.get_height()/2))
-            pygame.display.update()
-            pygame.time.delay(4000)
-            break
 
-        draw(player, elapsed_time, stars)
+            score = round(elapsed_time)
+
+            new_high = False
+
+            if score > high_score:
+                save_high_score(score)
+                high_score = score
+                new_high = True
+
+            result = game_over_screen(score, high_score, new_high)
+            if result == "restart":
+                return "restart"
+
+            # lost_text = FONT.render("You Lost!", 1, "white")
+            # WIN.blit(lost_text, (WIDTH/2 - lost_text.get_width()/2, HEIGHT/2 - lost_text.get_height()/2))
+            # pygame.display.update()
+            # pygame.time.delay(4000)
+            # break
+
+        draw(player, elapsed_time, stars, high_score)
 
     pygame.quit()  
 
 
 if __name__ == "__main__":
     main_menu()
-    main()
+    
+    while True:
+        result = main()
+        if result == "restart":
+            continue
+        else:
+            break
+
+# MENU → GAME → GAME OVER → RESTART → GAME → GAME OVER → RESTART ...
