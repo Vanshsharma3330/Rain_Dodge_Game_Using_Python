@@ -5,6 +5,7 @@ def game_over_screen(score, high_score, new_high):
     run = True
 
     restart_button = pygame.Rect(WIDTH//2 - 120, HEIGHT//2 + 60, 240, 60)
+    quit_button = pygame.Rect(WIDTH//2 - 120, HEIGHT//2 + 140, 240, 60)
 
     while run:
         WIN.blit(BG, (0, 0))
@@ -41,6 +42,23 @@ def game_over_screen(score, high_score, new_high):
             ),
         )
 
+        # QUIT Button
+        if quit_button.collidepoint(mouse_pos):
+            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND)
+            pygame.draw.rect(WIN, (200,0,0), quit_button)
+        else:
+            pygame.draw.rect(WIN, RED, quit_button)
+
+        quit_text = BUTTON_FONT.render("QUIT", 1, WHITE)
+        WIN.blit(
+            quit_text,
+            (
+                quit_button.x + (quit_button.width - quit_text.get_width()) // 2,
+                quit_button.y + (quit_button.height - quit_text.get_height()) // 2,
+            ),
+        )
+
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -49,5 +67,9 @@ def game_over_screen(score, high_score, new_high):
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if restart_button.collidepoint(event.pos):
                     return "restart"
+                if quit_button.collidepoint(event.pos):
+                    pygame.quit()
+                    exit()
+
         
         pygame.display.update()
